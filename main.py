@@ -2,6 +2,8 @@ import time
 
 import streamlit as st
 
+from model import Model
+
 # TODO: create fundtion that will return solution
 
 
@@ -17,7 +19,12 @@ def getSolution(params, pbar_container=st, max_deg=15):
         "lambda_multiblock": lambda_option, # Визначати λ з трьох систем рівнянь
 
     """
-    time.sleep(2)
+    def get(*args):
+        return [params.get(arg) for arg in args]
+
+    additive = Model(*get("input_file", "output_file", "sample_size", "dimensions", "degrees", "poly_type", "lambda_multiblock"))
+
+    additive.print_phi()
     pass
 
 
