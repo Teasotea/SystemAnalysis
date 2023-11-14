@@ -39,7 +39,8 @@ input = [
 107.1, 306.4, 96.5, 172.2, 24908, 63.37, 172.72, 14221.48
 ]
 
-additive = Model(input, "test.txt", 36, (2, 1, 2, 3), (6, 5, 8), "Чебишова", False)
+additive = Model(input, "test.txt", 36, (2, 1, 2, 3), (6, 5, 1), "Чебишова", False)
 
-additive.print_phi()
-additive.print_phi_extended()
+additive.solve()
+
+print(additive.error_normalized)

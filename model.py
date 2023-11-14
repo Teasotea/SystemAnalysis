@@ -1,3 +1,4 @@
+import re
 import sympy
 from sympy import Eq, Symbol, latex
 import numpy
@@ -58,6 +59,7 @@ class Model:
         self.c = array([self.c1, self.c2, self.c3]).T
 
         self.predict_normalized, self.predict = self.predict()
+        self.error_normalized, self.error = self.get_error()
 
     """Normalizing input data for polynomial input"""
     def normalize(self, x):
@@ -130,14 +132,14 @@ class Model:
         Collecting Ф# by Y, so essentially Ф is a list of matrices
         created as [P1[:, i], P2[:, i], P3[:, i]] for each i in range(ny)
         """
-        P = split(stack([P1, P2, P3], axis=-1), 3, axis=1)
-        P = list(map(squeeze, P))
+        self.P = split(stack([P1, P2, P3], axis=-1), 3, axis=1)
+        self.P = list(map(squeeze, self.P))
 
         """
         Finding c# values for each P#
         Amount of elements in c# equals to Y#
         """
-        return [self.gradient(P[i], self.yn[:, i]) for i in range(self.ny)]
+        return [self.gradient(self.P[i], self.yn[:, i]) for i in range(self.ny)]
 
     def print_phi(self):
         for i, _c in enumerate(self.c):
@@ -152,3 +154,21 @@ class Model:
         for i, _a in enumerate(a):
             phi = dot(T, around(_a * self.l, 5))
             print(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), phi))
+
+    def predict(self):
+
+        def denormalize(x, y):
+            return (x * (numpy.max(y, axis=0) - numpy.min(y, axis=0))) + numpy.min(y, axis=0)
+
+        confidence = 0.5
+        predict_normalized = array([clip(dot(self.P[i], self.c[:, i]), 0, 1) for i in range(self.ny)]).T
+        predict_normalized = confidence * predict_normalized + (1 - confidence) * self.yn
+        predict_denormalized = denormalize(predict_normalized, self.y)
+
+        return predict_normalized, predict_denormalized
+
+    def get_error(self):
+        error_normalized = numpy.max(abs(self.yn - self.predict_normalized), axis=0)
+        error_denormalized = numpy.max(abs(self.y - self.predict), axis=0)
+
+        return error_normalized, error_denormalized
