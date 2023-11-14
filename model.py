@@ -23,6 +23,12 @@ class Model:
         """Splitting rows matrix by columns of corespioding sizes"""
         self.n1, self.n2, self.n3, self.ny = self.n = dimensions
 
+        """Input polynomial degrees for X1, X2, X3 respectively"""
+        self.d1, self.d2, self.d3 = self.d = degrees
+
+        self.poly_type = poly_type
+        self.lambda_multiblock = lambda_multiblock
+
         """
         Splitting initial data into rows
         by the amount of samples, in our case 36
@@ -30,6 +36,7 @@ class Model:
         rows = split(array(input_file), sample_size)
         self.x1, self.x2, self.x3, self.y, _ = split(rows, cumsum(self.n), axis=1)
 
+    def solve(self):
         """Normalizing input data for polynomial input"""
         self.x1n = self.normalize(self.x1)
         self.x2n = self.normalize(self.x2)
@@ -39,13 +46,10 @@ class Model:
         """Defining b accoding to the assignment"""
         self.b = mean(self.normalize(self.y), axis=1)
 
-        """Input polynomial degrees for X1, X2, X3 respectively"""
-        self.d1, self.d2, self.d3 = self.d = degrees
-
         """Choosing polynom to use"""
-        self.polynom = self.get_polynomial(poly_type)
+        self.polynom = self.get_polynomial(self.poly_type)
 
-        self.l1, self.l2, self.l3 = self.get_lambda(lambda_multiblock)
+        self.l1, self.l2, self.l3 = self.get_lambda(self.lambda_multiblock)
         self.l = hstack([self.l1, self.l2, self.l3])
 
         self.a1, self.a2, self.a3 = self.get_a()
@@ -53,18 +57,17 @@ class Model:
         self.c1, self.c2, self.c3 = self.get_c()
         self.c = array([self.c1, self.c2, self.c3]).T
 
-    """Normalizing input data for polynomial input"""
+        self.predict_normalized, self.predict = self.predict()
 
+    """Normalizing input data for polynomial input"""
     def normalize(self, x):
         return (x - numpy.min(x, axis=0)) / (numpy.max(x, axis=0) - numpy.min(x, axis=0))
 
     """Base logic for solving equations, given by the variant"""
-
     def gradient(self, a, b):
         return scipy.sparse.linalg.cg(atleast_1d(a.T @ a), atleast_1d(a.T @ b), tol=1e-12)[0]
 
     """Defining b accoding to the assignment"""
-
     def get_polynomial(self, type):
         if type == "Чебишова":
             return sympy.chebyshevt
@@ -72,7 +75,6 @@ class Model:
             return sympy.legendre
 
     """Finding lambdas out based on the selected option"""
-
     def get_lambda(self, lambda_option):
         def apply_polynom(nx, deg):
             return array([[float(self.polynom(d, x)) for x in ax for d in range(deg + 1)] for ax in nx])
