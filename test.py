@@ -1,3 +1,4 @@
+from gettext import find
 from model import Model
 
 input = [
@@ -39,8 +40,20 @@ input = [
 107.1, 306.4, 96.5, 172.2, 24908, 63.37, 172.72, 14221.48
 ]
 
-additive = Model(input, "test.txt", 36, (2, 1, 2, 3), (6, 5, 1), "Чебишова", False)
+def solve(i, j, k):
+    additive = Model(input, "test.txt", 36, (2, 1, 2, 3), (i, j, k), "Чебишова", False)
+    additive.solve()
+    return additive.error_normalized
 
-additive.solve()
+def find_best():
+    errors = {}
 
-print(additive.error_normalized)
+    for i in range(8):
+        for j in range(8):
+            for k in range(8):
+                errors |= {f'{i},{j},{k}': solve(i, j, k)}
+
+    return min(errors, key=lambda k: errors[k].mean())
+
+print(find_best())
+print(solve(6, 5, 1))
