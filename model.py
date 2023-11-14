@@ -56,7 +56,7 @@ class Model:
     """Normalizing input data for polynomial input"""
 
     def normalize(self, x):
-        return (x - numpy.min(x)) / (numpy.max(x) - numpy.min(x))
+        return (x - numpy.min(x, axis=0)) / (numpy.max(x, axis=0) - numpy.min(x, axis=0))
 
     """Base logic for solving equations, given by the variant"""
 
