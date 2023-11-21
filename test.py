@@ -1,5 +1,3 @@
-# from gettext import find
-
 from model import Model
 
 input = [
