@@ -1,7 +1,7 @@
 # SystemAnalysis
 
-### How to run ?
+## How to run ?
 
-```
+```bash
 streamlit run main.py
 ```

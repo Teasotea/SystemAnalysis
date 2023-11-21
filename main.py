@@ -1,10 +1,10 @@
-import time
+from io import StringIO
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import streamlit as st
-
 from model import Model
-
-# TODO: create fundtion that will return solution
 
 
 def getSolution(params, pbar_container=st, max_deg=15):
@@ -17,15 +17,26 @@ def getSolution(params, pbar_container=st, max_deg=15):
         "weights": weight_method,  # "Ваги цільових функцій", ["Нормоване значення", "Середнє арифметичне"]
         "poly_type": poly_type, # "Вигляд поліномів", ["Чебишова", "Лежандра", "Лаґерра", "Ерміта"]
         "lambda_multiblock": lambda_option, # Визначати λ з трьох систем рівнянь
+        "sample_size": sample_size, # Розмір вибірки
+        ""
 
     """
+
     def get(*args):
         return [params.get(arg) for arg in args]
 
-    additive = Model(*get("input_file", "output_file", "sample_size", "dimensions", "degrees", "poly_type", "lambda_multiblock"))
+    additive = Model(
+        input_file=params["input_file"],
+        output_file=params["output_file"],
+        sample_size=params["sample_size"],
+        dimensions=params["dimensions"],
+        degrees=params["degrees"],
+        poly_type=params["poly_type"],
+        lambda_multiblock=params["lambda_multiblock"],
+    )
 
-    additive.print_phi()
-    pass
+    additive.solve()
+    return additive.print_phi()
 
 
 st.set_page_config(
@@ -66,17 +77,17 @@ st.markdown("<h1 class='centered-text'>Поліноми</h1>", unsafe_allow_html
 poly_type = st.radio("Вигляд поліномів", ["Чебишова", "Лежандра", "Лаґерра", "Ерміта"])
 st.write("Степені поліномів (введіть нульові для перебору та пошуку найкращих)")
 cols = st.columns(3)
-x1_deg = cols[0].number_input("для X1", value=13, step=1, key="x1_deg")
-x2_deg = cols[1].number_input("для X2", value=11, step=1, key="x2_deg")
-x3_deg = cols[2].number_input("для X3", value=7, step=1, key="x3_deg")
+x1_deg = cols[0].number_input("для X1", value=6, step=1, key="x1_deg")
+x2_deg = cols[1].number_input("для X2", value=5, step=1, key="x2_deg")
+x3_deg = cols[2].number_input("для X3", value=1, step=1, key="x3_deg")
 st.markdown("---")
 
 st.markdown("<h1 class='centered-text'>Вектори</h1>", unsafe_allow_html=True)
 cols = st.columns(4)
 x1_dim = cols[0].number_input("Розмірність X1", value=2, step=1, key="x1_dim")
-x2_dim = cols[1].number_input("Розмірність X2", value=2, step=1, key="x2_dim")
-x3_dim = cols[2].number_input("Розмірність X3", value=3, step=1, key="x3_dim")
-y_dim = cols[3].number_input("Розмірність Y", value=4, step=1, key="y_dim")
+x2_dim = cols[1].number_input("Розмірність X2", value=1, step=1, key="x2_dim")
+x3_dim = cols[2].number_input("Розмірність X3", value=2, step=1, key="x3_dim")
+y_dim = cols[3].number_input("Розмірність Y", value=3, step=1, key="y_dim")
 st.markdown("---")
 
 st.markdown("<h1 class='centered-text'>Додатково</h1>", unsafe_allow_html=True)
@@ -105,6 +116,7 @@ with st.sidebar:
         key="dec_sep",
     )
 
+
 st.markdown('<div class="centered-button-container">', unsafe_allow_html=True)
 if st.button("ВИКОНАТИ", key="run"):
     st.markdown("</div>", unsafe_allow_html=True)
@@ -124,14 +136,44 @@ if st.button("ВИКОНАТИ", key="run"):
             input_file_text = input_file_text.replace(" ", "\t")
         elif col_sep == "кома":
             input_file_text = input_file_text.replace(",", "\t")
+        file_text = StringIO(input_file_text)
+        df = pd.read_csv(file_text, sep="\t", header=None)
+        print(len(df.iloc[:, :-1].values.flatten()))
+
         params = {
-            "dimensions": [x1_dim, x2_dim, x3_dim, y_dim],
-            "input_file": input_file_text,
+            "dimensions": tuple([x1_dim, x2_dim, x3_dim, y_dim]),
+            "input_file": df.iloc[:, :-1].values.flatten(),
             "output_file": output_file + ".xlsx",
-            "degrees": [x1_deg, x2_deg, x3_deg],
+            "degrees": tuple([x1_deg, x2_deg, x3_deg]),
             "weights": weight_method,
             "poly_type": poly_type,
             "lambda_multiblock": lambda_option,
+            "sample_size": len(df),
         }
         with st.spinner("Зачекайте..."):
             results = getSolution(params, pbar_container=st, max_deg=15)
+
+            st.latex(results)
+
+        st.subheader("Графіки")
+
+        # Display example Matplotlib figure in Streamlit
+        x = np.linspace(0, 10, 100)
+        y = np.sin(x)
+
+        fig, ax = plt.subplots()
+        ax.plot(x, y)
+        ax.set_xlabel("X-axis")
+        ax.set_ylabel("Y-axis")
+        ax.set_title("Matplotlib Plot in Streamlit")
+        st.pyplot(fig)
+
+        # # TODO: Write code here to display results
+
+        # with open(params["output_file"], "rb") as fout:
+        #     st.download_button(
+        #         label="Завантажити вихідний файл",
+        #         data=fout,
+        #         file_name=params["output_file"],
+        #         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        #     )
