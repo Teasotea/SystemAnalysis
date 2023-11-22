@@ -112,9 +112,9 @@ class Model:
 
         if lambda_option:
             return [
-                apply_polynom(self.x1n, self.d1),
-                apply_polynom(self.x1n, self.d1),
-                apply_polynom(self.x1n, self.d1),
+                self.gradient(self.φ1, self.b),
+                self.gradient(self.φ2, self.b),
+                self.gradient(self.φ3, self.b)
             ]
         else:
             dims = [self.n1, self.n2, self.n3]
