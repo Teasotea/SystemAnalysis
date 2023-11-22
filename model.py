@@ -87,6 +87,10 @@ class Model:
             return sympy.chebyshevt
         elif type == "Лежандра":
             return sympy.legendre
+        elif type == "Лаґерра":
+            return sympy.laguerre
+        elif type == "Ерміта":
+            return sympy.hermite
 
     """Finding lambdas out based on the selected option"""
 
@@ -198,7 +202,7 @@ class Model:
         def denormalize(x, y):
             return (x * (np.max(y, axis=0) - np.min(y, axis=0))) + np.min(y, axis=0)
 
-        confidence = 0.5
+        confidence = 1 - sorted((0.3, sum(self.d)/12, 0.9))[1] + 0.3
         predict_normalized = np.array(
             [np.clip(np.dot(self.P[i], self.c[:, i]), 0, 1) for i in range(self.ny)]
         ).T
