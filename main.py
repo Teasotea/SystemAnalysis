@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
+from graph import Graph
 from model import Model
 
 
@@ -36,6 +37,17 @@ def getSolution(params, pbar_container=st, max_deg=15):
     )
 
     additive.solve()
+
+    result = []
+    # result.append(additive.l0.T)
+    result.append(np.c_[['\\lambda'], [additive.l0]])
+    result.append(np.c_[['a_1', 'a_2', 'a_3'], np.hstack([additive.a1, additive.a2, additive.a3])])
+    result.append(np.c_[['c_1', 'c_2', 'c_3'], additive.c])
+    result.extend(additive.print_phi())
+    result.extend(additive.print_phi_extended())
+
+    return (result, Graph(additive))
+
 def print_array(array):
     def is_number(n):
         try:
@@ -128,6 +140,7 @@ with st.sidebar:
         "Розділювач колонок даних",
         ("символ табуляції (типове значення)", "пробіл", "кома"),
         key="col_sep",
+        index=2
     )
     dec_sep = st.selectbox(
         "Розділювач дробової частини",
@@ -170,29 +183,23 @@ if st.button("ВИКОНАТИ", key="run"):
             "sample_size": len(df),
         }
         with st.spinner("Зачекайте..."):
-            results = getSolution(params, pbar_container=st, max_deg=15)
+            results, graph = getSolution(params, pbar_container=st, max_deg=15)
 
-            st.latex(results)
+
+            st.markdown("""
+            <style>
+            .katex-display>.katex {
+                white-space: unset !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            for res in results:
+                print_latex(res)
 
         st.subheader("Графіки")
 
-        # Display example Matplotlib figure in Streamlit
-        x = np.linspace(0, 10, 100)
-        y = np.sin(x)
-
-        fig, ax = plt.subplots()
-        ax.plot(x, y)
-        ax.set_xlabel("X-axis")
-        ax.set_ylabel("Y-axis")
-        ax.set_title("Matplotlib Plot in Streamlit")
-        st.pyplot(fig)
-
-        # # TODO: Write code here to display results
-
-        # with open(params["output_file"], "rb") as fout:
-        #     st.download_button(
-        #         label="Завантажити вихідний файл",
-        #         data=fout,
-        #         file_name=params["output_file"],
-        #         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        #     )
+        if (normed_plots):
+            st.pyplot(graph.plot_normalized())
+        else:
+            st.pyplot(graph.plot_predict())
