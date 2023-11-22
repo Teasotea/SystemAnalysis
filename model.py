@@ -162,12 +162,17 @@ class Model:
         return [self.gradient(self.P[i], self.yn[:, i]) for i in range(self.ny)]
 
     def print_phi(self):
+        result = []
         for i, _c in enumerate(self.c):
             phi = sympy.symbols(rf"\Phi_{{{i+1}1:{i+1}4}}(x_1)")
             rhs = np.dot(phi, np.around(_c, 5))
-            return latex(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), rhs))
+            formatted = latex(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), rhs))
+            result.append(formatted)
+            # return formatted
+        return result
 
     def print_phi_extended(self):
+        result = []
         T = [
             Symbol(rf"\cdot T_{{{p}}}(x_{{1{k+1}}})")
             for _n, _d in zip(self.n[:-1], self.d)
@@ -184,7 +189,10 @@ class Model:
 
         for i, _a in enumerate(a):
             phi = np.dot(T, np.around(_a * self.l0, 5))
-            print(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), phi))
+            formatted = latex(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), phi))
+            result.append(formatted)
+
+        return result
 
     def predict(self):
         def denormalize(x, y):
