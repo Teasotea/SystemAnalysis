@@ -36,7 +36,26 @@ def getSolution(params, pbar_container=st, max_deg=15):
     )
 
     additive.solve()
-    return additive.print_phi()
+def print_array(array):
+    def is_number(n):
+        try:
+            float(n)
+        except ValueError:
+            return False
+        return True
+
+    table = rf"\begin{{array}}{{|{'|'.join(['c' for i, _ in enumerate(array)])}|}}\hline "
+    for e in np.array(array).T:
+        table += " & ".join([f"{float(d):.4f}" if is_number(d) else d for d in e]) + r"\\ \hline"
+
+    table += rf"\end{{array}}"
+    st.latex(table)
+
+def print_latex(obj):
+    if isinstance(obj, str):
+        st.latex(obj)
+    elif isinstance(obj, list | np.ndarray):
+        print_array(obj)
 
 
 st.set_page_config(
