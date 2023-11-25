@@ -62,8 +62,7 @@ class Model:
 
         self.a1, self.a2, self.a3 = self.get_a()
 
-        self.c1, self.c2, self.c3 = self.get_c()
-        self.c = np.array([self.c1, self.c2, self.c3]).T
+        self.c = self.get_c()
 
         self.predict_normalized, self.predict = self.predict()
         self.error_normalized, self.error = self.get_error()
@@ -156,7 +155,7 @@ class Model:
         Collecting Ф# by Y, so essentially Ф is a list of matrices
         created as [P1[:, i], P2[:, i], P3[:, i]] for each i in range(ny)
         """
-        self.P = np.split(np.stack([P1, P2, P3], axis=-1), 3, axis=1)
+        self.P = np.split(np.stack([P1, P2, P3], axis=-1), self.ny, axis=1)
         self.P = list(map(np.squeeze, self.P))
 
         """
@@ -204,7 +203,7 @@ class Model:
 
         confidence = 1 - sorted((0.3, sum(self.d)/12, 0.9))[1] + 0.3
         predict_normalized = np.array(
-            [np.clip(np.dot(self.P[i], self.c[:, i]), 0, 1) for i in range(self.ny)]
+            [np.clip(np.dot(self.P[i], self.c[i]), 0, 1) for i in range(self.ny)]
         ).T
         predict_normalized = (
             confidence * predict_normalized + (1 - confidence) * self.yn

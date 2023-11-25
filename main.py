@@ -40,12 +40,9 @@ def getSolution(params, pbar_container=st, max_deg=15):
     additive.solve()
 
     result = []
-    # result.append(additive.l0.T)
-    result.append(np.c_[["\\lambda"], [additive.l0]])
-    result.append(
-        np.c_[["a_1", "a_2", "a_3"], np.hstack([additive.a1, additive.a2, additive.a3])]
-    )
-    result.append(np.c_[["c_1", "c_2", "c_3"], additive.c])
+    result.append(np.c_[['\\lambda'], [additive.l0]])
+    result.append(np.c_[[f'a_{i}' for i in range(additive.ny)], np.hstack([additive.a1, additive.a2, additive.a3])])
+    result.append(np.c_[[f'c_{i}' for i in range(additive.ny)], additive.c])
     result.extend(additive.print_phi())
     result.extend(additive.print_phi_extended())
 
