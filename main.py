@@ -41,8 +41,8 @@ def getSolution(params, pbar_container=st, max_deg=15):
 
     result = []
     result.append(np.c_[['\\lambda'], [additive.l0]])
-    result.append(np.c_[[f'a_{i}' for i in range(additive.ny)], np.hstack([additive.a1, additive.a2, additive.a3])])
-    result.append(np.c_[[f'c_{i}' for i in range(additive.ny)], additive.c])
+    result.append(np.c_[[f'a_{i+1}' for i in range(additive.ny)], np.hstack([additive.a1, additive.a2, additive.a3])])
+    result.append(np.c_[[f'c_{i+1}' for i in range(additive.ny)], additive.c])
     result.extend(additive.print_phi())
     result.extend(additive.print_phi_extended())
 
@@ -128,6 +128,7 @@ cols = st.columns(3)
 x1_deg = cols[0].number_input("для X1", value=6, step=1, key="x1_deg")
 x2_deg = cols[1].number_input("для X2", value=5, step=1, key="x2_deg")
 x3_deg = cols[2].number_input("для X3", value=1, step=1, key="x3_deg")
+find_button = st.empty()
 st.markdown("---")
 
 st.markdown("<h1 class='centered-text'>Додатково</h1>", unsafe_allow_html=True)
@@ -136,6 +137,39 @@ weight_method = st.radio(
 )
 lambda_option = st.checkbox("Визначати λ з трьох систем рівнянь")
 normed_plots = st.checkbox("Графіки для нормованих значень")
+
+def get_params():
+    if input_file is None:
+        st.error("**Помилка:** виберіть файл вхідних даних")
+    elif x1_deg < 0 or x2_deg < 0 or x3_deg < 0:
+        st.error("**Помилка:** степені поліномів не можуть бути від'ємними.")
+    elif dec_sep == "кома" and col_sep == "кома":
+        st.error(
+            "**Помилка:** кома не може бути одночасно розділювачем колонок та дробової частини"
+        )
+    else:
+        input_file_text = input_file.getvalue().decode()
+        if dec_sep == "кома":
+            input_file_text = input_file_text.replace(",", ".")
+        if col_sep == "пробіл":
+            input_file_text = input_file_text.replace(" ", "\t")
+        elif col_sep == "кома":
+            input_file_text = input_file_text.replace(",", "\t")
+        file_text = StringIO(input_file_text)
+        df = pd.read_csv(file_text, sep="\t", header=None)
+        print(len(df.iloc[:, :-1].values.flatten()))
+
+        return {
+            "dimensions": tuple([x1_dim, x2_dim, x3_dim, y_dim]),
+            "input_file": df.iloc[:, :-1].values.flatten(),
+            "output_file": output_file + ".xlsx",
+            "degrees": tuple([x1_deg, x2_deg, x3_deg]),
+            "weights": weight_method,
+            "poly_type": poly_type,
+            "lambda_multiblock": lambda_option,
+            "sample_size": len(df),
+        }
+    return None
 
 with st.sidebar:
     st.header("Дані")
@@ -157,40 +191,35 @@ with st.sidebar:
         key="dec_sep",
     )
 
+def find_degrees():
+    params = get_params()
+    if params is not None:
+        with st.spinner("Підбираються степені. Зачекайте..."):
+            errors = {}
+            for i in range(8):
+                for j in range(8):
+                    for k in range(8):
+                        model = Model(
+                            input_file=params["input_file"],
+                            output_file=params["output_file"],
+                            sample_size=params["sample_size"],
+                            dimensions=params["dimensions"],
+                            degrees=(i, j, k),
+                            poly_type=params["poly_type"],
+                            lambda_multiblock=params["lambda_multiblock"],
+                        )
+                        model.solve()
+                        errors.update({(i, j, k): model.error_normalized})
+            st.session_state.x1_deg, st.session_state.x2_deg, st.session_state.x3_deg = min(errors, key=lambda k: errors[k].mean())
+
+
+find_button.button("Підібрати степені", key="find_degrees", on_click=find_degrees)
 
 st.markdown('<div class="centered-button-container">', unsafe_allow_html=True)
 if st.button("ВИКОНАТИ", key="run"):
     st.markdown("</div>", unsafe_allow_html=True)
-    if input_file is None:
-        st.error("**Помилка:** виберіть файл вхідних даних")
-    elif x1_deg < 0 or x2_deg < 0 or x3_deg < 0:
-        st.error("**Помилка:** степені поліномів не можуть бути від'ємними.")
-    elif dec_sep == "кома" and col_sep == "кома":
-        st.error(
-            "**Помилка:** кома не може бути одночасно розділювачем колонок та дробової частини"
-        )
-    else:
-        input_file_text = input_file.getvalue().decode()
-        if dec_sep == "кома":
-            input_file_text = input_file_text.replace(",", ".")
-        if col_sep == "пробіл":
-            input_file_text = input_file_text.replace(" ", "\t")
-        elif col_sep == "кома":
-            input_file_text = input_file_text.replace(",", "\t")
-        file_text = StringIO(input_file_text)
-        df = pd.read_csv(file_text, sep="\t", header=None)
-        print(len(df.iloc[:, :-1].values.flatten()))
-
-        params = {
-            "dimensions": tuple([x1_dim, x2_dim, x3_dim, y_dim]),
-            "input_file": df.iloc[:, :-1].values.flatten(),
-            "output_file": output_file + ".xlsx",
-            "degrees": tuple([x1_deg, x2_deg, x3_deg]),
-            "weights": weight_method,
-            "poly_type": poly_type,
-            "lambda_multiblock": lambda_option,
-            "sample_size": len(df),
-        }
+    params = get_params()
+    if params is not None:
         with st.spinner("Зачекайте..."):
             results, graph = getSolution(params, pbar_container=st, max_deg=15)
 
