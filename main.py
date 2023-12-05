@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import streamlit as st
+
 from graph import Graph
 from model import Model
 
@@ -40,13 +41,16 @@ def getSolution(params, pbar_container=st, max_deg=15):
 
     result = []
     # result.append(additive.l0.T)
-    result.append(np.c_[['\\lambda'], [additive.l0]])
-    result.append(np.c_[['a_1', 'a_2', 'a_3'], np.hstack([additive.a1, additive.a2, additive.a3])])
-    result.append(np.c_[['c_1', 'c_2', 'c_3'], additive.c])
+    result.append(np.c_[["\\lambda"], [additive.l0]])
+    result.append(
+        np.c_[["a_1", "a_2", "a_3"], np.hstack([additive.a1, additive.a2, additive.a3])]
+    )
+    result.append(np.c_[["c_1", "c_2", "c_3"], additive.c])
     result.extend(additive.print_phi())
     result.extend(additive.print_phi_extended())
 
     return (result, Graph(additive))
+
 
 def print_array(array):
     def is_number(n):
@@ -56,17 +60,25 @@ def print_array(array):
             return False
         return True
 
-    table = rf"\begin{{array}}{{|{'|'.join(['c' for i, _ in enumerate(array)])}|}}\hline "
+    table = (
+        rf"\begin{{array}}{{|{'|'.join(['c' for i, _ in enumerate(array)])}|}}\hline "
+    )
     for e in np.array(array).T:
-        table += " & ".join([f"{float(d):.4f}" if is_number(d) else d for d in e]) + r"\\ \hline"
+        table += (
+            " & ".join([f"{float(d):.4f}" if is_number(d) else d for d in e])
+            + r"\\ \hline"
+        )
 
     table += rf"\end{{array}}"
     st.latex(table)
 
+
 def print_latex(obj):
     if isinstance(obj, str):
         st.latex(obj)
-    elif isinstance(obj, list | np.ndarray):
+    # elif isinstance(obj, list | np.ndarray):
+    #     print_array(obj)
+    elif isinstance(obj, list) or isinstance(obj, np.ndarray):
         print_array(obj)
 
 
@@ -140,7 +152,7 @@ with st.sidebar:
         "Розділювач колонок даних",
         ("символ табуляції (типове значення)", "пробіл", "кома"),
         key="col_sep",
-        index=2
+        index=2,
     )
     dec_sep = st.selectbox(
         "Розділювач дробової частини",
@@ -185,21 +197,23 @@ if st.button("ВИКОНАТИ", key="run"):
         with st.spinner("Зачекайте..."):
             results, graph = getSolution(params, pbar_container=st, max_deg=15)
 
-
-            st.markdown("""
+            st.markdown(
+                """
             <style>
             .katex-display>.katex {
                 white-space: unset !important;
             }
             </style>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
 
             for res in results:
                 print_latex(res)
 
         st.subheader("Графіки")
 
-        if (normed_plots):
+        if normed_plots:
             st.pyplot(graph.plot_normalized())
         else:
             st.pyplot(graph.plot_predict())
