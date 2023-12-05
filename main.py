@@ -88,11 +88,11 @@ st.set_page_config(
     },
 )
 
-page_bg_color = "#ccffcc"
+page_bg_color = "#ffffff"
 st.markdown(
     f"""
     <style>
-    .reportview-container {{
+    .reportview-container, .appview-container {{
         background-color: {page_bg_color};
     }}
     .centered-text {{
