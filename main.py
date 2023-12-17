@@ -1,4 +1,5 @@
 from io import StringIO
+import string
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -152,22 +153,22 @@ def get_params():
         if dec_sep == "кома":
             input_file_text = input_file_text.replace(",", ".")
         if col_sep == "пробіл":
-            input_file_text = input_file_text.replace(" ", "\t")
+            input_file_text = input_file_text.replace(" ", ";")
         elif col_sep == "кома":
-            input_file_text = input_file_text.replace(",", "\t")
-        file_text = StringIO(input_file_text)
-        df = pd.read_csv(file_text, sep="\t", header=None)
-        print(len(df.iloc[:, :-1].values.flatten()))
+            input_file_text = input_file_text.replace(",", ";")
+
+        sample_size = len(input_file_text.split("\n"))
+        input_values = input_file_text.translate({ord(c) :None for c in string.whitespace})
 
         return {
             "dimensions": tuple([x1_dim, x2_dim, x3_dim, y_dim]),
-            "input_file": df.iloc[:, :-1].values.flatten(),
+            "input_file": np.fromstring(input_values, sep=';'),
             "output_file": output_file + ".xlsx",
             "degrees": tuple([x1_deg, x2_deg, x3_deg]),
             "weights": weight_method,
             "poly_type": poly_type,
             "lambda_multiblock": lambda_option,
-            "sample_size": len(df),
+            "sample_size": sample_size,
         }
     return None
 
