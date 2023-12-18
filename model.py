@@ -77,7 +77,7 @@ class Model:
         minp = np.min(p)
         if maxp == np.inf:
             return np.ones_like(p)
-        if maxp != minp and (minp < 0 or maxp > 1):
+        if maxp != minp and (minp >= 0 or maxp <= 1):
             return (p - minp) / (maxp - minp)
         elif minp < 0:
             return np.zeros_like(p)
