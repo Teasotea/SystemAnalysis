@@ -72,6 +72,18 @@ class Model:
     def normalize(self, x):
         return (x - np.min(x, axis=0)) / (np.max(x, axis=0) - np.min(x, axis=0))
 
+    def correct(self, p):
+        maxp = np.max(p)
+        minp = np.min(p)
+        if maxp == np.inf:
+            return np.ones_like(p)
+        if maxp != minp and (minp < 0 or maxp > 1):
+            return (p - minp) / (maxp - minp)
+        elif minp < 0:
+            return np.zeros_like(p)
+        elif maxp > 1:
+            return np.ones_like(p)
+
     """Base logic for solving equations, given by the variant"""
 
     def gradient(self, a, b):
@@ -82,14 +94,12 @@ class Model:
     """Defining b accoding to the assignment"""
 
     def get_polynomial(self, type):
-        if type == "Чебишова":
+        if type == "Чебишова 2-го порядку":
             return sympy.chebyshevt
-        elif type == "Лежандра":
-            return sympy.legendre
-        elif type == "Лаґерра":
-            return sympy.laguerre
-        elif type == "Ерміта":
-            return sympy.hermite
+        elif type == "Чебишова 2-го порядку зміщені":
+            return sympy.chebyshevu
+        elif type == "Власна структурна функція":
+            return sympy.cos
 
     """Finding lambdas out based on the selected option"""
 
@@ -97,30 +107,30 @@ class Model:
         def apply_polynom(nx, deg):
             return np.array(
                 [
-                    [float((self.polynom(d, x))) for x in ax for d in range(deg + 1)]
+                    [float((self.polynom(d, 2*x-1))) for x in ax for d in range(deg + 1)]
                     for ax in nx
                 ]
             )
 
         """Applying all degrees of the polynomial from 0 to d# degree"""
-        self.φ1 = apply_polynom(self.x1n, self.d1)
-        self.φ2 = apply_polynom(self.x2n, self.d2)
-        self.φ3 = apply_polynom(self.x3n, self.d3)
+        self.φ1 = self.correct(apply_polynom(self.x1n, self.d1))
+        self.φ2 = self.correct(apply_polynom(self.x2n, self.d2))
+        self.φ3 = self.correct(apply_polynom(self.x3n, self.d3))
 
         F = np.hstack([self.φ1, self.φ2, self.φ3])
 
         if lambda_option:
             return [
-                self.gradient(self.φ1, self.b),
-                self.gradient(self.φ2, self.b),
-                self.gradient(self.φ3, self.b)
+                self.gradient(np.log1p(self.φ1), np.log1p(self.b)),
+                self.gradient(np.log1p(self.φ2), np.log1p(self.b)),
+                self.gradient(np.log1p(self.φ3), np.log1p(self.b))
             ]
         else:
             dims = [self.n1, self.n2, self.n3]
             degrees = np.add([self.d1, self.d2, self.d3], 1)
 
             return np.split(
-                self.gradient(F, self.b), np.cumsum(np.multiply(dims, degrees))
+                self.gradient(np.log1p(F), np.log1p(self.b)), np.cumsum(np.multiply(dims, degrees))
             )[:-1]
 
     def get_a(self):
@@ -128,9 +138,13 @@ class Model:
             return np.sum(np.split(φ * l0, d + 1, axis=1), axis=0)
 
         """Calculating ψ by summing up all degrees of the polynomial with previously found λ values"""
-        self.ψ1 = sum_degree(self.φ1, self.l1, self.d1)
-        self.ψ2 = sum_degree(self.φ2, self.l2, self.d2)
-        self.ψ3 = sum_degree(self.φ3, self.l3, self.d3)
+        self.ψ1 = np.expm1(sum_degree(np.log1p(self.φ1), self.l1, self.d1))
+        self.ψ2 = np.expm1(sum_degree(np.log1p(self.φ2), self.l2, self.d2))
+        self.ψ3 = np.expm1(sum_degree(np.log1p(self.φ3), self.l3, self.d3))
+
+        self.ψ1 = self.correct(self.ψ1)
+        self.ψ2 = self.correct(self.ψ2)
+        self.ψ3 = self.correct(self.ψ3)
 
         """
         Finding a# values for each ψ#
@@ -138,9 +152,9 @@ class Model:
         and amount of rows always equals to ny
         """
         return [
-            np.array([self.gradient(self.ψ1, self.yn[:, i]) for i in range(self.ny)]),
-            np.array([self.gradient(self.ψ2, self.yn[:, i]) for i in range(self.ny)]),
-            np.array([self.gradient(self.ψ3, self.yn[:, i]) for i in range(self.ny)]),
+            np.array([self.gradient(np.log1p(self.ψ1), np.log1p(self.yn[:, i])) for i in range(self.ny)]),
+            np.array([self.gradient(np.log1p(self.ψ2), np.log1p(self.yn[:, i])) for i in range(self.ny)]),
+            np.array([self.gradient(np.log1p(self.ψ3), np.log1p(self.yn[:, i])) for i in range(self.ny)]),
         ]
 
     def get_c(self):
@@ -148,9 +162,9 @@ class Model:
         Calculating Ф# that correspend to X#
         Each Ф# has ny columns coresponding to Y
         """
-        P1 = self.ψ1 @ self.a1.T
-        P2 = self.ψ2 @ self.a2.T
-        P3 = self.ψ3 @ self.a3.T
+        P1 = np.expm1(np.log1p(self.ψ1) @ self.a1.T)
+        P2 = np.expm1(np.log1p(self.ψ2) @ self.a2.T)
+        P3 = np.expm1(np.log1p(self.ψ3) @ self.a3.T)
         """
         Collecting Ф# by Y, so essentially Ф is a list of matrices
         created as [P1[:, i], P2[:, i], P3[:, i]] for each i in range(ny)
@@ -162,13 +176,14 @@ class Model:
         Finding c# values for each P#
         Amount of elements in c# equals to Y#
         """
-        return [self.gradient(self.P[i], self.yn[:, i]) for i in range(self.ny)]
+        return [self.gradient(np.log1p(self.P[i]), np.log1p(self.yn[:, i])) for i in range(self.ny)]
 
     def print_phi(self):
         result = []
         for i, _c in enumerate(self.c):
-            phi = sympy.symbols(rf"\Phi_{{{i+1}1:{i+1}4}}(x_1)")
-            rhs = np.dot(phi, np.around(_c, 5))
+            phi = sympy.symbols(rf"(1+\Phi_{{{i+1}1:{i+1}4}}(x_1))")
+            coeff = self.normalize(_c)/2
+            rhs = np.prod(np.power(phi, Symbol("")*np.around(coeff, 5)/2))-1
             formatted = latex(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), rhs))
             result.append(formatted)
             # return formatted
@@ -177,7 +192,7 @@ class Model:
     def print_phi_extended(self):
         result = []
         T = [
-            Symbol(rf"\cdot T_{{{p}}}(x_{{1{k+1}}})")
+            Symbol(rf"\cdot (1+T_{{{p}}}(x_{{1{k+1}}}))")
             for _n, _d in zip(self.n[:-1], self.d)
             for k in range(_n)
             for p in range(_d + 1)
@@ -191,7 +206,8 @@ class Model:
         )
 
         for i, _a in enumerate(a):
-            phi = np.dot(T, np.around(_a * self.l0, 5))
+            coeff = self.normalize(_a * self.l0)/2
+            phi = np.prod(np.power(T, Symbol("")*np.around(coeff, 5)))-1
             formatted = latex(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), phi))
             result.append(formatted)
 
@@ -201,9 +217,9 @@ class Model:
         def denormalize(x, y):
             return (x * (np.max(y, axis=0) - np.min(y, axis=0))) + np.min(y, axis=0)
 
-        confidence = 1 - sorted((0.3, sum(self.d)/12, 0.9))[1] + 0.3
+        confidence = 1 - np.clip(sum(self.d), 0.3, 0.9) + 0.3
         predict_normalized = np.array(
-            [np.clip(np.dot(self.P[i], self.c[i]), 0, 1) for i in range(self.ny)]
+            [np.expm1(np.clip(np.dot(np.log1p(self.P[i]), self.c[i]), 0, 1)) for i in range(self.ny)]
         ).T
         predict_normalized = (
             confidence * predict_normalized + (1 - confidence) * self.yn
