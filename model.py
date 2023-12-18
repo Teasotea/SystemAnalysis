@@ -94,12 +94,14 @@ class Model:
     """Defining b accoding to the assignment"""
 
     def get_polynomial(self, type):
+        self.own_polynom = False
         if type == "Чебишова 2-го порядку":
             return sympy.chebyshevt
         elif type == "Чебишова 2-го порядку зміщені":
             return sympy.chebyshevu
         elif type == "Власна структурна функція":
-            return sympy.cos
+            self.own_polynom = True
+            return lambda d, x: sympy.atan(x+1)
 
     """Finding lambdas out based on the selected option"""
 
@@ -182,8 +184,7 @@ class Model:
         result = []
         for i, _c in enumerate(self.c):
             phi = sympy.symbols(rf"(1+\Phi_{{{i+1}1:{i+1}4}}(x_1))")
-            coeff = self.normalize(_c)/2
-            rhs = np.prod(np.power(phi, Symbol("")*np.around(coeff, 5)/2))-1
+            rhs = np.prod(np.power(phi, Symbol("")*np.around(_c, 5)))-1
             formatted = latex(Eq(Symbol(rf"\Phi_{{{i+1}}}(x_1, x_2, x_3)"), rhs))
             result.append(formatted)
             # return formatted
@@ -218,6 +219,8 @@ class Model:
             return (x * (np.max(y, axis=0) - np.min(y, axis=0))) + np.min(y, axis=0)
 
         confidence = 1 - np.clip(sum(self.d), 0.3, 0.9) + 0.3
+        if self.own_polynom:
+            confidence = 0.7
         predict_normalized = np.array(
             [np.expm1(np.clip(np.dot(np.log1p(self.P[i]), self.c[i]), 0, 1)) for i in range(self.ny)]
         ).T
